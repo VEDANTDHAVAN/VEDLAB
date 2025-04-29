@@ -1,10 +1,13 @@
-import { Room } from "./Room";
-import { CollaborativeApp } from "./CollaborativeApp";
+"use client"
+//import { CollaborativeApp } from "./CollaborativeApp";
+
+import Live from "@/components/Live";
 
 export default function Page() {
   return (
-    <Room>
-      <CollaborativeApp />
-    </Room>
+      <div>
+        <h1 className="text-nowrap">VedLabs - Figma Clone</h1>
+       <Live />
+      </div>
   );
 }
