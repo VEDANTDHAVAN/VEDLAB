@@ -1,8 +1,5 @@
-/* Tailwind base styles */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
+@import "tailwindcss";
+@import "tailwindcss/preflight";
 /* Ensure base font family is applied */
 * {
   font-family: 'Work Sans', sans-serif;

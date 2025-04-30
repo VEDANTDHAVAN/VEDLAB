@@ -4,11 +4,11 @@ import type { Config } from "tailwindcss";
 const config = {
   darkMode: ["class", ".dark"], // Support dark mode via 'class' or '.dark'
   content: [
-    "./pages/**/*.{ts,tsx}",
-    "./components/**/*.{ts,tsx}",
-    "./app/**/*.{ts,tsx}",
-    "./src/**/*.{ts,tsx,js,jsx,html}",
-  ],
+    "./pages/**/*.{js,ts,jsx,tsx}",
+    "./components/**/*.{js,ts,jsx,tsx}",
+    "./app/**/*.{js,ts,jsx,tsx}",
+    "./src/**/*.{js,ts,jsx,tsx}",
+  ],    
   theme: {
     container: {
       center: true,
