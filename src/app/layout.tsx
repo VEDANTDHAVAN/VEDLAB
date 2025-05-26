@@ -6,7 +6,7 @@ import { Inter } from "next/font/google";
 export const metadata: Metadata = {
   title: "VedLab",
   description: "A Figma clone built with Next.js, Shadcn, Tailwind, and TypeScript.",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  icons: [{ rel: "icon", url: "/vedlab.ico" }],
 };
 
 const inter = Inter({

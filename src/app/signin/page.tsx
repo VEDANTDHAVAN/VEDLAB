@@ -1,20 +1,20 @@
 "use client";
 import Link from "next/link";
 import { useActionState } from "react";
-import { register } from "../actions/auth";
+import { authenticate } from "../actions/auth";
 
 export default function Page() {
  const [errorMessage, formAction, isPending] = useActionState(
-    register,
+    authenticate,
     undefined
  )  
   
  return (
     <div className="flex min-h-screen items-center justify-center bg-white px-4">
      <div className="w-full max-w-sm space-y-6">
-      <h1 className="text-2xl font-bold text-center">Sign Up</h1>
-      <p className="text-sm text-center text-gray-500">Create an account to get started</p>
+      <h1 className="text-2xl font-bold text-center">Sign In</h1>
       <form action={formAction} className="space-y-4">
+       <input type="hidden" name="redirectTo" value="/dashboard"/>
        <div className="relative h-fit">
         <input type="email"
           name="email"
@@ -33,9 +33,9 @@ export default function Page() {
         />
        </div>
        <button disabled={isPending} type="submit" className="w-full rounded-md bg-black p-2 text-sm text-white hover:bg-gray-800">
-        {isPending ? "Signing Up...." : "Sign Up"}
+        {isPending ? "Signing In...." : "Sign In"}
        </button>
-       <p className="text-sm text-center text-gray-500">Already have an account? <Link href="/signin" className="text-blue-500 hover:text-blue-700">Login</Link></p>
+       <p className="text-sm text-center text-gray-500">No account? <Link href="/signup" className="text-blue-500 hover:text-blue-700">Create One</Link></p>
        {errorMessage && (
         <p className="text-center text-sm text-red-500">{errorMessage}</p>
        )}
