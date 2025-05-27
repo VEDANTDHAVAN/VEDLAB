@@ -3,9 +3,10 @@ import { nanoid } from "nanoid";
 import { useMutation, useStorage } from "@liveblocks/react"
 import { colorToCSS, pointerEventToCanvasPoint } from "~/utils";
 import LayerComponent from "./LayerComponent";
-import { LayerType,type RectangleLayer, type Layer, type Point, type Camera } from "~/types";
+import { LayerType,type RectangleLayer, type Layer, type Point, type Camera, type EllipseLayer, type CanvasState, CanvasMode } from "~/types";
 import { LiveObject } from "@liveblocks/client";
 import React, { useState } from "react";
+import ToolsBar from "../toolsbar/ToolsBar";
 
 const MAX_LAYERS = 100;
 
@@ -14,6 +15,7 @@ export default function Canvas() {
     const roomColor = useStorage((root) => root.roomColor);//{r: 255, g: 87, b: 51}//
     const layerIds = useStorage((root) => root.layerIds);
     const [camera, setCamera] = useState<Camera>({x: 0, y: 0, z: 0, zoom: 1})
+    const [canvasState, setCanvasState] = useState<CanvasState>({mode: CanvasMode.None})
     //New function to Insert layer using  Liveblocks - hook
     const insertLayer = useMutation((
         {storage, setMyPresence}, 
@@ -43,6 +45,19 @@ export default function Canvas() {
         });
       }
 
+      else if(layerType === LayerType.Ellipse){
+        layer = new LiveObject<EllipseLayer>({
+         type: LayerType.Ellipse,
+         x: position.x,
+         y: position.y,
+         height: 100,
+         width: 100,
+         fill: {r: 89, g: 255, b: 197},
+         stroke: {r: 89, g: 255, b: 197},
+         opacity: 100,
+        });
+      }
+
       if(layer) {
         liveLayerIds.push(layerId);
         liveLayers.set(layerId, layer);
@@ -55,8 +70,16 @@ export default function Canvas() {
     const onPointerUp = useMutation(({}, e: React.PointerEvent) => {
       const point = pointerEventToCanvasPoint(e, camera);
 
-      insertLayer(LayerType.Rectangle, point);
-    }, [])
+      if(canvasState.mode === CanvasMode.None){
+        setCanvasState({mode: CanvasMode.None})
+      }
+      else if(canvasState.mode === CanvasMode.Inserting){
+        insertLayer(
+          canvasState.layerType,
+          point,
+        );
+      }
+    }, [ canvasState,setCanvasState, insertLayer])
 
     return(
     <div className="flex h-screen w-full">
@@ -74,6 +97,7 @@ export default function Canvas() {
        </svg>
       </div>
      </main>
+     <ToolsBar canvasState={canvasState} setCanvasState={(newState) => setCanvasState(newState)}  />
     </div>
     )
 }

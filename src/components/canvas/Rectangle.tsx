@@ -11,7 +11,7 @@ export default function Rectangle({
        style={{transform: `translate(${x}px, ${y}px)`}}
        width={width} height={height} fill={fill ? colorToCSS(fill) : "#00FF00"} 
        strokeWidth={1} stroke={stroke ? colorToCSS(stroke) : "#00FF00"}
-       opacity={opacity} rx={cornerRadius ?? 0} ry={cornerRadius ?? 0}
+       opacity={`${opacity ?? 100}%`} rx={cornerRadius ?? 0} ry={cornerRadius ?? 0}
       />
       
     </g>
