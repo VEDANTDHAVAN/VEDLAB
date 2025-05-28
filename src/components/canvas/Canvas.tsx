@@ -3,7 +3,7 @@ import { nanoid } from "nanoid";
 import { useMutation, useSelf, useStorage } from "@liveblocks/react"
 import { colorToCSS, pencilPointsToPathLayer, pointerEventToCanvasPoint } from "~/utils";
 import LayerComponent from "./LayerComponent";
-import { LayerType,type RectangleLayer, type Layer, type Point, type Camera, type EllipseLayer, type CanvasState, CanvasMode } from "~/types";
+import { LayerType,type RectangleLayer, type Layer, type Point, type Camera, type EllipseLayer, type CanvasState, CanvasMode, type Textlayer } from "~/types";
 import { LiveObject } from "@liveblocks/client";
 import React, { useCallback, useState } from "react";
 import ToolsBar from "../toolsbar/ToolsBar";
@@ -58,6 +58,21 @@ export default function Canvas() {
          stroke: {r: 89, g: 255, b: 197},
          opacity: 100,
         });
+      } else if(layerType === LayerType.Text){
+        layer = new LiveObject<Textlayer>({
+          type: LayerType.Text,
+          x: position.x,
+          y: position.y,
+          text: "Write here",
+          height: 100,
+          width: 100,
+          fontSize: 16,
+          fontWeight: 400,
+          fontFamily: "Ariel",
+          fill: {r: 217, g: 217, b: 217},
+          stroke: {r: 217, g: 217, b: 217},
+          opacity: 100,
+        })
       }
 
       if(layer) {

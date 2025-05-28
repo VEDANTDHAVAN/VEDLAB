@@ -3,6 +3,7 @@ import { memo } from "react";
 import { LayerType } from "~/types";
 import Rectangle from "./Rectangle";
 import Ellipse from "./Ellipse";
+import Text from "./Text";
 import Path from "./Path";
 import { colorToCSS } from "~/utils";
 
@@ -23,6 +24,8 @@ const LayerComponent = memo(({id}: { id: string}) => {
                 stroke={layer.stroke ? colorToCSS(layer.stroke) : "#CCC"}
                 opacity={layer.opacity}
             />
+    case LayerType.Text:
+        return <Text id={id} layer={layer}/>
     default:
         return null;
  }
