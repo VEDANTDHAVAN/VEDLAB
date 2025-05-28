@@ -1,12 +1,13 @@
 "use client";
 import { nanoid } from "nanoid";
-import { useMutation, useStorage } from "@liveblocks/react"
-import { colorToCSS, pointerEventToCanvasPoint } from "~/utils";
+import { useMutation, useSelf, useStorage } from "@liveblocks/react"
+import { colorToCSS, pencilPointsToPathLayer, pointerEventToCanvasPoint } from "~/utils";
 import LayerComponent from "./LayerComponent";
 import { LayerType,type RectangleLayer, type Layer, type Point, type Camera, type EllipseLayer, type CanvasState, CanvasMode } from "~/types";
 import { LiveObject } from "@liveblocks/client";
 import React, { useCallback, useState } from "react";
 import ToolsBar from "../toolsbar/ToolsBar";
+import Path from "./Path";
 
 const MAX_LAYERS = 100;
 
@@ -16,6 +17,7 @@ export default function Canvas() {
     const layerIds = useStorage((root) => root.layerIds);
     const [camera, setCamera] = useState<Camera>({x: 0, y: 0, zoom: 1})
     const [canvasState, setCanvasState] = useState<CanvasState>({mode: CanvasMode.None})
+    const pencilDraft = useSelf((me) => me.presence.pencilDraft);
     //New function to Insert layer using  Liveblocks - hook
     const insertLayer = useMutation((
         {storage, setMyPresence}, 
@@ -67,6 +69,47 @@ export default function Canvas() {
     }, [],
     );
 
+    const startDrawing = useMutation(({setMyPresence}, point: Point, pressure: number) => {
+      setMyPresence({
+        pencilDraft: [[point.x, point.y, pressure]],
+        penColor: {r: 150, g: 100, b: 200},
+      })
+    }, []);
+
+    const continueDrawing = useMutation(({ self, setMyPresence}, point: Point, e: React.PointerEvent) => {
+      const {pencilDraft} = self.presence;
+
+      if(canvasState.mode !== CanvasMode.Pencil || e.buttons !== 1 || pencilDraft === null) {
+        return;
+      }
+
+
+      setMyPresence({
+        pencilDraft: [...pencilDraft, [point.x, point.y, e.pressure]],
+      });
+    }, [canvasState.mode]);
+
+    const insertPath = useMutation(({storage, self, setMyPresence}) => {
+      const liveLayers = storage.get("layers");
+      const {pencilDraft} = self.presence;
+
+      if(pencilDraft === null || pencilDraft.length < 2 || liveLayers.size >= MAX_LAYERS) {
+        setMyPresence({pencilDraft: null});
+        return;
+      }
+
+      const id = nanoid();
+      liveLayers.set(id, 
+        new LiveObject(pencilPointsToPathLayer(pencilDraft, {r: 150, g: 100, b: 200}))
+      );
+    
+      const liveLayerIds = storage.get("layerIds");
+      liveLayerIds.push(id);
+      setMyPresence({pencilDraft: null});
+      setCanvasState({ mode: CanvasMode.Pencil });
+
+    }, [])
+
     const onPointerUp = useMutation(({}, e: React.PointerEvent) => {
       const point = pointerEventToCanvasPoint(e, camera);
 
@@ -79,6 +122,8 @@ export default function Canvas() {
         );
       } else if(canvasState.mode === CanvasMode.Dragging){
         setCanvasState({mode: CanvasMode.Dragging, origin: null})
+      } else if(canvasState.mode === CanvasMode.Pencil){
+        insertPath();
       }
 
     }, [ canvasState,setCanvasState, insertLayer])
@@ -95,9 +140,14 @@ export default function Canvas() {
       const point = pointerEventToCanvasPoint(e, camera);
 
       if(canvasState.mode === CanvasMode.Dragging){
-        setCanvasState({mode: CanvasMode.Dragging , origin: point})
+        setCanvasState({mode: CanvasMode.Dragging , origin: point});
+        return;
       }
-    }, [ canvasState.mode,setCanvasState, camera])
+      if(canvasState.mode === CanvasMode.Pencil) {
+        startDrawing(point, e.pressure);
+        return;
+      }
+    }, [ canvasState.mode,setCanvasState, camera, startDrawing])
 
     const onPointerMove = useMutation(({}, e: React.PointerEvent) => {
       const point = pointerEventToCanvasPoint(e, camera);
@@ -111,8 +161,10 @@ export default function Canvas() {
           y: camera.y + deltaY,
           zoom: camera.zoom,
         }));
+      } else if(canvasState.mode === CanvasMode.Pencil){
+        continueDrawing(point, e);
       }
-    }, [ canvasState,setCanvasState, insertLayer])
+    }, [ canvasState,setCanvasState, insertLayer, continueDrawing])
 
     return(
     <div className="flex h-screen w-full">
@@ -129,6 +181,8 @@ export default function Canvas() {
             <LayerComponent key={layerId} id={layerId}/>
           ))}
         </g>
+        {pencilDraft !== null && pencilDraft.length > 0 
+          && <Path x={0} y={0} fill={colorToCSS({r: 217, g: 217, b: 217})} opacity={100} points={pencilDraft} />}
        </svg>
       </div>
      </main>

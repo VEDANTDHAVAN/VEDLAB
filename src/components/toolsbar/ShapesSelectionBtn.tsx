@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CanvasMode, LayerType, type CanvasState } from "~/types";
 import IconButton from "./IconButton";
-import { BiPointer } from "react-icons/bi";
-import { RiHand } from "react-icons/ri";
 import { IoSquareOutline, IoEllipseOutline } from "react-icons/io5";
 
 export default function ShapesSelectionBtn({
