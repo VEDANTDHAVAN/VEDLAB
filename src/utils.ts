@@ -1,5 +1,5 @@
 import type React from "react";
-import { LayerType, Side, type Camera, type Color, type PathLayer, type Point, type XYWH } from "./types";
+import { LayerType, Side, type Camera, type Color, type Layer, type PathLayer, type Point, type XYWH } from "./types";
 
 export function colorToCSS(color: Color) {
     return `#${color.r.toString(16).padStart(2, "0")}${color.g.toString(16).padStart(2, "0")}${color.b.toString(16).padStart(2, "0")}`;
@@ -109,4 +109,28 @@ export function resizeBounds(bounds: XYWH, corner: Side, point: Point) : XYWH {
   }
 
   return result;
+}
+
+export function findIntersectingLayersWithRectangle(
+  layerIds: readonly string[], layers: ReadonlyMap<string, Layer>, a: Point, b: Point,
+) {
+ const rect = {
+  x: Math.min(a.x, b.x),
+  y: Math.min(a.y, b.y),
+  width: Math.abs(a.x - b.x),
+  height: Math.abs(a.y - b.y),
+ }
+ const ids = [];
+ for(const layerId of layerIds){
+  const layer = layers.get(layerId);
+  if(layer == null) continue;
+
+  const {x, y, width, height} = layer;
+  if(rect.x + rect.width > x && rect.x < rect.width 
+    && rect.y + rect.height > y && rect.y < y + height) {
+    ids.push(layerId);
+  }
+ }
+
+ return ids;
 }

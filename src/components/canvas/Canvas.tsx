@@ -1,14 +1,16 @@
 "use client";
 import { nanoid } from "nanoid";
-import { useMutation, useMyPresence, useSelf, useStorage } from "@liveblocks/react"
-import { colorToCSS, pencilPointsToPathLayer, pointerEventToCanvasPoint, resizeBounds } from "~/utils";
+import { useCanRedo, useCanUndo, useHistory, useMutation, useMyPresence, useSelf, useStorage } from "@liveblocks/react"
+import { colorToCSS, findIntersectingLayersWithRectangle, pencilPointsToPathLayer, pointerEventToCanvasPoint, resizeBounds } from "~/utils";
 import LayerComponent from "./LayerComponent";
 import { LayerType,type RectangleLayer, type Layer, type Point, type Camera, type EllipseLayer, type CanvasState, CanvasMode, type Textlayer, Side, type XYWH } from "~/types";
 import { LiveObject } from "@liveblocks/client";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import ToolsBar from "../toolsbar/ToolsBar";
 import Path from "./Path";
 import SelectionBox from "./SelectionBox";
+import useDeleteLayers from "~/hooks/useDeleteLayers";
+import SelectionTools from "./SelectionTools";
 
 const MAX_LAYERS = 100;
 
@@ -17,16 +19,63 @@ export default function Canvas() {
     const roomColor = useStorage((root) => root.roomColor);//{r: 255, g: 87, b: 51}//
     const layerIds = useStorage((root) => root.layerIds);
     const [camera, setCamera] = useState<Camera>({x: 0, y: 0, zoom: 1})
+    const history = useHistory();
+    const canUndo = useCanUndo();
+    const canRedo = useCanRedo();
     const [canvasState, setCanvasState] = useState<CanvasState>({mode: CanvasMode.None})
     const pencilDraft = useSelf((me) => me.presence.pencilDraft);
     const presence = useMyPresence();
+    const deleteLayers = useDeleteLayers();
+    const selectAllLayers = useMutation(({setMyPresence}) => {
+      if(layerIds){
+        setMyPresence({selection: [...layerIds]}, {addToHistory: true});
+      }
+    },[layerIds]);
+
+    useEffect(() => {
+     function onKeyDown(e: KeyboardEvent){
+      const activeElement = document.activeElement;
+      const isInputField = activeElement && 
+      (activeElement.tagName === "INPUT" || activeElement.tagName === "TEXTAREA");
+
+      if(isInputField) return;
+
+      switch (e.key){
+        case "Backspace":
+          deleteLayers();
+          break;
+        case "z":
+          if(e.ctrlKey || e.metaKey){
+            if(e.shiftKey){
+              history.redo();
+            } else{
+              history.undo();
+            }
+          }
+          break;
+        case "a":
+          if(e.ctrlKey || e.metaKey){
+            selectAllLayers();
+            break;
+          }
+      }
+     }
+
+     document.addEventListener("keydown", onKeyDown);
+
+     return () => {
+      document.removeEventListener("keydown", onKeyDown);
+     }
+    }, [deleteLayers])
+
     const onResizeHandlePointerDown = useCallback((corner: Side, initialBound: XYWH) => {
+      history.pause();
       setCanvasState({
         mode: CanvasMode.Resizing,
         corner,
         initialBound,
       })
-    }, []);
+    }, [history]);
     //New function to Insert layer using  Liveblocks - hook
     const insertLayer = useMutation((
         {storage, setMyPresence}, 
@@ -89,25 +138,30 @@ export default function Canvas() {
         liveLayers.set(layerId, layer);
 
         setMyPresence({selection: [layerId]}, {addToHistory: true});
+        setCanvasState({mode: CanvasMode.None});
       }
     }, [],
     );
-    console.log(presence[0].selection);
+    //console.log(presence[0].selection);
+    //console.log(canvasState.mode);
     const onLayerPointerDown = useMutation(({self, setMyPresence}, e: React.PointerEvent, layerId: string) => {
       if(canvasState.mode === CanvasMode.Pencil || canvasState.mode === CanvasMode.Inserting){
         return;
       }
-
+      history.pause();
       e.stopPropagation();
       if(!self.presence.selection.includes(layerId)){
         setMyPresence({
           selection: [layerId],
-        });
+        }, {addToHistory: true});
       }
-      const point = pointerEventToCanvasPoint(e, camera)
-
-      setCanvasState({mode: CanvasMode.Translating, current: point})
-    }, [canvasState.mode, camera, canvasState.mode],);
+      if(e.nativeEvent.button === 2) {
+       setCanvasState({mode: CanvasMode.RightClick});
+      }else{
+       const point = pointerEventToCanvasPoint(e, camera)
+       setCanvasState({mode: CanvasMode.Translating, current: point})
+      }
+    }, [camera, canvasState.mode, history],);
 
     const resizeSelectedLayer = useMutation(({storage, self}, point: Point) => {
      if(canvasState.mode !== CanvasMode.Resizing) {
@@ -150,7 +204,7 @@ export default function Canvas() {
 
     const unselectLayers = useMutation(({self, setMyPresence}) => {
       if(self.presence.selection.length > 0){
-        setMyPresence({selection: []});
+        setMyPresence({selection: []}, {addToHistory: true});
       }
     }, []);
 
@@ -190,17 +244,17 @@ export default function Canvas() {
     
       const liveLayerIds = storage.get("layerIds");
       liveLayerIds.push(id);
-      setMyPresence({pencilDraft: null});
+      setMyPresence({pencilDraft: null}, {addToHistory: true});
       setCanvasState({ mode: CanvasMode.Pencil });
 
-    }, [])
+    }, [history]);
 
     const onPointerUp = useMutation(({}, e: React.PointerEvent) => {
       const point = pointerEventToCanvasPoint(e, camera);
-
-      if(canvasState.mode === CanvasMode.None){
-        setCanvasState({mode: CanvasMode.None});
+      if(canvasState.mode === CanvasMode.RightClick) return;
+      if(canvasState.mode === CanvasMode.None || canvasState.mode === CanvasMode.Pressing){
         unselectLayers();
+        setCanvasState({mode: CanvasMode.None});
       } else if(canvasState.mode === CanvasMode.Inserting){
         insertLayer(
           canvasState.layerType,
@@ -213,8 +267,8 @@ export default function Canvas() {
       } else {
         setCanvasState({mode: CanvasMode.None});
       }
-
-    }, [ canvasState,setCanvasState, insertLayer, unselectLayers])
+      history.resume();
+    }, [ canvasState,setCanvasState, insertLayer, unselectLayers, history])
 
     const onWheel = useCallback((e: React.WheelEvent) => {
       setCamera((camera) => ({
@@ -227,6 +281,7 @@ export default function Canvas() {
     const onPointerDown = useMutation(({}, e: React.PointerEvent) => {
       const point = pointerEventToCanvasPoint(e, camera);
 
+      if(canvasState.mode === CanvasMode.RightClick) return;
       if(canvasState.mode === CanvasMode.Dragging){
         setCanvasState({mode: CanvasMode.Dragging , origin: point});
         return;
@@ -235,12 +290,35 @@ export default function Canvas() {
         startDrawing(point, e.pressure);
         return;
       }
+      if(canvasState.mode === CanvasMode.Inserting) return;
+      if(canvasState.mode === CanvasMode.None || canvasState.mode === CanvasMode.Pressing){
+        setCanvasState({mode: CanvasMode.Pressing, origin: point})
+      }
     }, [ canvasState.mode,setCanvasState, camera, startDrawing])
+
+    const startMultiSelection = useCallback((current: Point, origin: Point) => {
+     if(Math.abs(current.x - origin.x) + Math.abs(current.y - origin.y) > 5){
+      setCanvasState({mode: CanvasMode.SelectionNet, origin, current});
+     }
+    }, []);
+
+    const updateSelectionNet = useMutation(({storage, setMyPresence}, current: Point, origin: Point) => {
+     if(layerIds){
+      const layers = storage.get("layers").toImmutable();
+      setCanvasState({mode: CanvasMode.SelectionNet, origin, current,});
+      const ids = findIntersectingLayersWithRectangle(layerIds, layers, origin, current);
+      setMyPresence({selection: ids});
+    }
+    }, [layerIds])
 
     const onPointerMove = useMutation(({}, e: React.PointerEvent) => {
       const point = pointerEventToCanvasPoint(e, camera);
 
-      if(canvasState.mode === CanvasMode.Dragging && canvasState.origin !== null){
+     if(canvasState.mode === CanvasMode.Pressing){
+       startMultiSelection(point, canvasState.origin);
+     } else if(canvasState.mode === CanvasMode.SelectionNet){
+       updateSelectionNet(point, canvasState.origin);
+     } else if(canvasState.mode === CanvasMode.Dragging && canvasState.origin !== null){
         const deltaX = e.movementX;
         const deltaY = e.movementY;
         
@@ -256,7 +334,8 @@ export default function Canvas() {
       } else if(canvasState.mode === CanvasMode.Translating){
         translateSelectedLayer(point);
       }
-    }, [ canvasState,setCanvasState, insertLayer, continueDrawing, resizeSelectedLayer, translateSelectedLayer])
+    }, [ canvasState, continueDrawing, camera,
+       resizeSelectedLayer, translateSelectedLayer, updateSelectionNet, startMultiSelection])
 
     return(
     <div className="flex h-screen w-full">
@@ -265,14 +344,22 @@ export default function Canvas() {
        style={{backgroundColor: roomColor ? colorToCSS(roomColor) : "#1e1e1e"}}
        className="h-full w-full touch-none" 
       >
+        <SelectionTools camera={camera} canvasMode={canvasState.mode}/>
        <svg onWheel={onWheel} onPointerUp={onPointerUp} 
             onPointerDown={onPointerDown} onPointerMove={onPointerMove}
-       className="w-full h-full">
+       className="w-full h-full" onContextMenu={(e) => e.preventDefault()}>
         <g style={{transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`}}>
           {layerIds?.map(layerId => (
             <LayerComponent key={layerId} id={layerId} onLayerPointerDown={onLayerPointerDown}/>
           ))}
           <SelectionBox onResizeHandlePointerDown={onResizeHandlePointerDown}/>
+          {canvasState.mode === CanvasMode.SelectionNet && canvasState.current != null && 
+           <rect className="fill-blue-600/5 stroke-blue-600 stroke-[0.5]" 
+            x={Math.min(canvasState.origin.x, canvasState.current.x)} 
+            y={Math.min(canvasState.origin.y, canvasState.current.y)} 
+            width={Math.abs(canvasState.origin.x - canvasState.current.x)}
+            height={Math.abs(canvasState.origin.y - canvasState.current.y)}
+           />}
           {pencilDraft !== null && pencilDraft.length > 0  
           && <Path x={0} y={0} fill={colorToCSS({r: 217, g: 217, b: 217})} opacity={100} points={pencilDraft} />}
         </g>
@@ -280,12 +367,17 @@ export default function Canvas() {
       </div>
      </main>
      <ToolsBar 
-          canvasState={canvasState} setCanvasState={(newState) => setCanvasState(newState)} 
-          zoomIn={() => {
+        canvasState={canvasState} setCanvasState={(newState) => setCanvasState(newState)} 
+        zoomIn={() => {
             setCamera((camera) => ({...camera, zoom: camera.zoom + 0.1 }))
-          }} zoomOut={() => {
+          }} 
+        zoomOut={() => {
             setCamera((camera) => ({...camera, zoom: camera.zoom - 0.1 }))
-          }} canZoomIn={camera.zoom < 2} canZoomOut={camera.zoom > 0.4}  />
+          }} 
+        canZoomIn={camera.zoom < 2} canZoomOut={camera.zoom > 0.4}  
+        redo={() => history.redo()} undo={() => history.undo()}
+        canRedo={canRedo} canUndo={canUndo}
+      />
     </div>
     )
 }

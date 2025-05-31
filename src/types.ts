@@ -95,7 +95,10 @@ export enum CanvasMode {
     Dragging,
     Resizing,
     Translating, //select layers, move them around, resize them if you want
-    Pencil
+    Pencil,
+    SelectionNet,
+    Pressing, //while selecting, to know if user wants to select or not
+    RightClick
 }
 
 export type CanvasState = 
@@ -121,4 +124,16 @@ export type CanvasState =
 | {
     mode: CanvasMode.Translating;
     current: Point;
+  }
+| {
+    mode: CanvasMode.Pressing;
+    origin: Point;
+  }
+| {
+    mode: CanvasMode.SelectionNet;
+    origin: Point;
+    current?: Point;
+  }
+| {
+    mode: CanvasMode.RightClick;
   }
