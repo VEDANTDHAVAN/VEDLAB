@@ -11,20 +11,22 @@ import Path from "./Path";
 import SelectionBox from "./SelectionBox";
 import useDeleteLayers from "~/hooks/useDeleteLayers";
 import SelectionTools from "./SelectionTools";
+import SideBars from "../sidebars/SideBars";
 
 const MAX_LAYERS = 100;
 
 export default function Canvas() {
-
+    
     const roomColor = useStorage((root) => root.roomColor);//{r: 255, g: 87, b: 51}//
     const layerIds = useStorage((root) => root.layerIds);
     const [camera, setCamera] = useState<Camera>({x: 0, y: 0, zoom: 1})
+    const [canvasState, setCanvasState] = useState<CanvasState>({mode: CanvasMode.None})
+    const [leftMinimized, setLeftMinimized] = useState(false);
     const history = useHistory();
     const canUndo = useCanUndo();
     const canRedo = useCanRedo();
-    const [canvasState, setCanvasState] = useState<CanvasState>({mode: CanvasMode.None})
-    const pencilDraft = useSelf((me) => me.presence.pencilDraft);
     const presence = useMyPresence();
+    const pencilDraft = useSelf((me) => me.presence.pencilDraft);
     const deleteLayers = useDeleteLayers();
     const selectAllLayers = useMutation(({setMyPresence}) => {
       if(layerIds){
@@ -378,6 +380,7 @@ export default function Canvas() {
         redo={() => history.redo()} undo={() => history.undo()}
         canRedo={canRedo} canUndo={canUndo}
       />
+      <SideBars leftMinimized={leftMinimized} setLeftMinimized={setLeftMinimized}/>
     </div>
     )
 }
