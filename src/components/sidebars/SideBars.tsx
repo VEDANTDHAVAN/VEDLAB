@@ -2,15 +2,27 @@
 
 import { useMutation, useOthers, useSelf, useStorage } from "@liveblocks/react";
 import Link from "next/dist/client/link";
-import { hexToRGB } from "~/utils";
+import { colorToCSS, connectionIdToColor, hexToRGB } from "~/utils";
 import {PiPathFill, PiSidebarSimpleDuotone, PiSidebarSimpleThin} from "react-icons/pi";
-import { LayerType } from "~/types";
+import { LayerType, type Color } from "~/types";
 import { IoEllipseOutline, IoSquareOutline } from "react-icons/io5";
 import { AiOutlineFontSize } from "react-icons/ai";
 import LayerButton from "./LayerButton";
 import NumberInput from "./NumberInput";
 import { BsCircleHalf } from "react-icons/bs";
 import { RiRoundedCorner } from "react-icons/ri";
+import ColorPicker from "./ColorPicker";
+import DropDown from "./DropDown";
+import "@fontsource/lora";
+import "@fontsource/montserrat";
+import "@fontsource/open-sans";
+import "@fontsource/oswald";
+import "@fontsource/playfair-display";
+import "@fontsource/poppins";
+import "@fontsource/raleway";
+import "@fontsource/roboto";
+import "@fontsource/source-code-pro";
+import UserAvatar from "./UserAvatar";
 
 export default function SideBars({leftMinimized, setLeftMinimized}:{
     leftMinimized: boolean, setLeftMinimized: (value: boolean) => void,
@@ -34,10 +46,14 @@ export default function SideBars({leftMinimized, setLeftMinimized}:{
     const reversedLayerIds = [...layerIds ?? []].reverse();
     const selection = useSelf((me) => me.presence.selection);
 
+    const setRoomColor = useMutation(({storage}, newColor: Color)=> {
+      storage.set("roomColor", newColor);
+    },[])
+
     const updateLayer = useMutation(({storage}, updates: {
      x?: number, y?: number, width?: number, height?: number,
      opacity?: number, cornerRadius?: number, fill?: string, 
-     stroke?: string, fontSize?: number, fontWeight?: string, 
+     stroke?: string, fontSize?: number, fontWeight?: number, 
      fontFamily?: string,
     }) => {
      if(!selectedLayer) return;
@@ -60,6 +76,18 @@ export default function SideBars({leftMinimized, setLeftMinimized}:{
         })
      }
     },[selectedLayer]);
+
+    const fontOptions = [
+      "Roboto",
+      "Poppins",
+      "Montserrat",
+      "Open Sans",
+      "Lora",
+      "Source Code Pro",
+      "Playfair Display",
+      "Oswald",
+      "Raleway"
+    ];
 
     return (
     <>
@@ -126,7 +154,12 @@ export default function SideBars({leftMinimized, setLeftMinimized}:{
      ${!leftMinimized && !layer ? "h-screen" : ""} ${!leftMinimized && layer ? 
      "bottom-0 top-0 h-screen" : ""} right-0 w-[250px] flex flex-col border-l border-gray-400
       bg-white`}>
-     <span className="p-2">Users and Share here</span>
+     <div className="flex items-center justify-between pr-2">
+      <div className="flex w-full max-36 gap-2 overflow-x-scroll p-3 text-xs">
+        {me && (<UserAvatar color={connectionIdToColor(me.connectionId)} name={me.info.name}/>)}
+      </div>
+      <p>Share Button</p>
+     </div>
      <div className="border-b border-gray-300" />
      {layer ? (<>
       <div className="flex flex-col gap-2 p-4">
@@ -186,15 +219,64 @@ export default function SideBars({leftMinimized, setLeftMinimized}:{
       </div>
       <div className="border-b border-gray-300" />
       <div className="flex flex-col gap-2 p-4">
-       <span className="mb-2 tert-[12px] font-medium">Fill</span>
-       {/*<ColorPicker value={rgbtoHex(layer.fill)} onChange={(color) => {
-          updateLayer({fill: color});
+       <span className="mb-2 text-[12px] font-medium">Fill</span>
+       <ColorPicker value={colorToCSS(layer.fill)} onChange={(color) => {
+          updateLayer({fill: color, stroke: color});
         }} 
-        />*/}
+       />
       </div>
+      <div className="border-b border-gray-300" />
+      <div className="flex flex-col gap-2 p-4">
+       <span className="mb-2 text-[12px] font-medium">Stroke</span>
+       <ColorPicker value={colorToCSS(layer.stroke)} onChange={(color) => {
+          updateLayer({stroke: color});
+        }} 
+       />
+      </div>
+      {layer.type === LayerType.Text && (<>
+        <div className="border-b border-gray-300" />
+        <div className="flex flex-col gap-2 p-4">
+        <span className="mb-2 text-[12px] font-medium">Typography</span>
+        <div className="flex flex-col gap-1">
+          <DropDown value={layer.fontFamily} onChange={(value) => {
+            updateLayer({fontFamily: value});
+          }} options={fontOptions}/>
+          <div className="flex w-full gap-2">
+            <div className="flex w-full flex-col gap-1">
+              <p className="text-[10px] font-medium text-gray-600">Size</p>
+              <NumberInput value={layer.fontSize} onChange={(number) => {
+                updateLayer({fontSize: number});
+              }} classNames="w-full" icon={<p>S</p>}/>
+            </div>
+            <div className="flex w-full flex-col gap-1">
+              <p className="text-[10px] font-medium text-gray-600">Weight</p>
+              <DropDown value={layer.fontWeight.toString()} onChange={(value) => {
+                updateLayer({fontWeight: Number(value)});
+              }} options={["100", "200", "300", "400", "500", "600", "700", "800", "900"]}/>
+            </div>
+          </div>
+        </div>
+        </div>
+      </>)}
      </> 
-    ) : <div></div>}
-    </div> : <div></div>}
+    ) : <div className="flex flex-col gap-2 p-4">
+       <span className="mb-2 text-[12px] font-medium">Page</span>
+       <ColorPicker value={roomColor ? colorToCSS(roomColor) : "#1e1e1e"} 
+         onChange={(color) => {
+          const rgbColor = hexToRGB(color);
+          setRoomColor(rgbColor);
+         }}
+       />
+      </div>}
+    </div> : 
+    <div className="fixed right-3 top-3 flex h-[48px] w-[250px] items-center
+     justify-between rounded-xl border bg-white pr-2">
+      <div className="flex w-full max-36 gap-2 overflow-x-scroll p-3 text-xs">
+        {me && (<UserAvatar color={connectionIdToColor(me.connectionId)} name={me.info.name}/>)}
+      </div>
+      <p>Share Button</p>
+    </div>
+    }
     </>
     )
 }

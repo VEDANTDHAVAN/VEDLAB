@@ -142,3 +142,9 @@ export function findIntersectingLayersWithRectangle(
 
  return ids;
 }
+
+const COLORS = ["#F67280", "#355C7D", "#C06C84", "#6C5B7B", "#F8B195", "#2A363B"]
+
+export function connectionIdToColor(connectionId: number): string{
+  return COLORS[connectionId % COLORS.length]!;
+}
