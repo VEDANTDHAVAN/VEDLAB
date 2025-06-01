@@ -157,6 +157,8 @@ export default function SideBars({leftMinimized, setLeftMinimized}:{
      <div className="flex items-center justify-between pr-2">
       <div className="flex w-full max-36 gap-2 overflow-x-scroll p-3 text-xs">
         {me && (<UserAvatar color={connectionIdToColor(me.connectionId)} name={me.info.name}/>)}
+        {others.map((other) => (<UserAvatar key={other.connectionId} color={connectionIdToColor(other.connectionId)} 
+          name={other.info.name}/>))}
       </div>
       <p>Share Button</p>
      </div>
@@ -273,6 +275,8 @@ export default function SideBars({leftMinimized, setLeftMinimized}:{
      justify-between rounded-xl border bg-white pr-2">
       <div className="flex w-full max-36 gap-2 overflow-x-scroll p-3 text-xs">
         {me && (<UserAvatar color={connectionIdToColor(me.connectionId)} name={me.info.name}/>)}
+        {others.map((other) => (<UserAvatar key={other.connectionId} color={connectionIdToColor(other.connectionId)} 
+          name={other.info.name}/>))}
       </div>
       <p>Share Button</p>
     </div>

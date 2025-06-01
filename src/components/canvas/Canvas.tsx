@@ -5,13 +5,14 @@ import { colorToCSS, findIntersectingLayersWithRectangle, pencilPointsToPathLaye
 import LayerComponent from "./LayerComponent";
 import { LayerType,type RectangleLayer, type Layer, type Point, type Camera, type EllipseLayer, type CanvasState, CanvasMode, type Textlayer, Side, type XYWH } from "~/types";
 import { LiveObject } from "@liveblocks/client";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import ToolsBar from "../toolsbar/ToolsBar";
 import Path from "./Path";
 import SelectionBox from "./SelectionBox";
 import useDeleteLayers from "~/hooks/useDeleteLayers";
 import SelectionTools from "./SelectionTools";
 import SideBars from "../sidebars/SideBars";
+import MultiPlayerGuides from "./MultiPlayerGuides";
 
 const MAX_LAYERS = 100;
 
@@ -224,8 +225,8 @@ export default function Canvas() {
         return;
       }
 
-
       setMyPresence({
+        cursor: point,
         pencilDraft: [...pencilDraft, [point.x, point.y, e.pressure]],
       });
     }, [canvasState.mode]);
@@ -313,7 +314,7 @@ export default function Canvas() {
     }
     }, [layerIds])
 
-    const onPointerMove = useMutation(({}, e: React.PointerEvent) => {
+    const onPointerMove = useMutation(({setMyPresence}, e: React.PointerEvent) => {
       const point = pointerEventToCanvasPoint(e, camera);
 
      if(canvasState.mode === CanvasMode.Pressing){
@@ -336,8 +337,13 @@ export default function Canvas() {
       } else if(canvasState.mode === CanvasMode.Translating){
         translateSelectedLayer(point);
       }
+      setMyPresence({cursor: point});
     }, [ canvasState, continueDrawing, camera,
        resizeSelectedLayer, translateSelectedLayer, updateSelectionNet, startMultiSelection])
+
+    const onPointerLeave = useMutation(({setMyPresence}, ) => {
+     setMyPresence({cursor: null});
+    },[])
 
     return(
     <div className="flex h-screen w-full">
@@ -347,7 +353,7 @@ export default function Canvas() {
        className="h-full w-full touch-none" 
       >
         <SelectionTools camera={camera} canvasMode={canvasState.mode}/>
-       <svg onWheel={onWheel} onPointerUp={onPointerUp} 
+       <svg onWheel={onWheel} onPointerUp={onPointerUp} onPointerLeave={onPointerLeave}
             onPointerDown={onPointerDown} onPointerMove={onPointerMove}
        className="w-full h-full" onContextMenu={(e) => e.preventDefault()}>
         <g style={{transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.zoom})`}}>
@@ -362,6 +368,7 @@ export default function Canvas() {
             width={Math.abs(canvasState.origin.x - canvasState.current.x)}
             height={Math.abs(canvasState.origin.y - canvasState.current.y)}
            />}
+          <MultiPlayerGuides />
           {pencilDraft !== null && pencilDraft.length > 0  
           && <Path x={0} y={0} fill={colorToCSS({r: 217, g: 217, b: 217})} opacity={100} points={pencilDraft} />}
         </g>
