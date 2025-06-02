@@ -13,15 +13,29 @@ export async function POST(req: Request) {
         where: {
             id: userSession?.user.id
         },
+        include: {
+            ownedRooms: true,
+            roomInvites: {
+                include: {
+                    room: true,
+                },
+            },
+        }
     });
 
     const session = liveblocks.prepareSession(user.id, {
         userInfo: {
-            name: user.email ?? "Anonymous"
-        }
+            name: user.email ?? "Anonymous",
+        },
     });
 
-    session.allow(`room:${"testing"}`, session.FULL_ACCESS);
+    user.ownedRooms.forEach((room) => {
+        session.allow(`room:${room.id}`, session.FULL_ACCESS);
+    });
+
+    user.roomInvites.forEach((invite) => {
+        session.allow(`room:${invite.room.id}`, session.FULL_ACCESS);
+    });
 
     const {status, body} = await session.authorize();
 

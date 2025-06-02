@@ -149,9 +149,9 @@ export function connectionIdToColor(connectionId: number): string{
   return COLORS[connectionId % COLORS.length]!;
 }
 
-export function getContrastingColor(col: string) {
+export function getContrastingColor(col: string): string {
   if (typeof window === "undefined") {
-    return;
+    return "#000000"; // Default to black if window is undefined
   }
   const useBlack = getColor(hexToRgb(standardizeColor(col)));
   return useBlack ? "#000000" : "#ffffff";
@@ -163,9 +163,9 @@ type RGB = {
   b: number;
 } | null;
 
-function getColor(rgb: RGB) {
+function getColor(rgb: RGB): boolean {
   if (!rgb) {
-    return;
+    return false;
   }
 
   const { r, g, b } = rgb;
@@ -189,7 +189,7 @@ function standardizeColor(str: string): string {
 function hexToRgb(hex: string): RGB {
   // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
   const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-  hex = hex.replace(shorthandRegex, function (m, r, g, b) {
+  hex = hex.replace(shorthandRegex, function ( r, g, b) {
     return r + r + g + g + b + b;
   });
 

@@ -1,4 +1,4 @@
-import { object, string, z } from "zod";
+import { object, string } from "zod";
 
 export const signUpSchema = object({
     email: string({required_error: "Email is required"}).email("Invalid email address"),

@@ -23,9 +23,13 @@ import "@fontsource/raleway";
 import "@fontsource/roboto";
 import "@fontsource/source-code-pro";
 import UserAvatar from "./UserAvatar";
+import type { User } from "@prisma/client";
+import SharedMenu from "./SharedMenu";
 
-export default function SideBars({leftMinimized, setLeftMinimized}:{
+export default function SideBars({leftMinimized, setLeftMinimized, 
+  roomName, roomId, othersWithAccessToRoom}:{
     leftMinimized: boolean, setLeftMinimized: (value: boolean) => void,
+    roomName: string, roomId: string, othersWithAccessToRoom: User[],
 }){
     const me = useSelf();
     const others = useOthers();
@@ -101,7 +105,7 @@ export default function SideBars({leftMinimized, setLeftMinimized}:{
          </Link>
          <PiSidebarSimpleThin onClick={() => setLeftMinimized(true)} className="h-5 w-5 cursor-pointer"/>
         </div>
-       <h2 className="mt-2 scroll-m-20 text-[14px] font-medium">RoomName</h2>
+       <h2 className="mt-2 scroll-m-20 text-[14px] font-medium">{roomName}</h2>
       </div>
       <div  className="border-b border-gray-300"/> 
       <div className="flex flex-col gap-1 p-2">
@@ -143,7 +147,7 @@ export default function SideBars({leftMinimized, setLeftMinimized}:{
         <Link href="/dashboard">
          <img src="/vedlab.png" alt="VedLab Logo" className="h-[20px] w-[20px]"/>
         </Link>
-        <h2 className="scroll-m-20 text-[14px] font-medium">RoomName</h2>
+        <h2 className="scroll-m-20 text-[14px] font-medium">{roomName}</h2>
         <PiSidebarSimpleDuotone onClick={() => setLeftMinimized(false)} className="h-5 right-0 w-5 cursor-pointer"/>
       </div>
     )}
@@ -160,7 +164,7 @@ export default function SideBars({leftMinimized, setLeftMinimized}:{
         {others.map((other) => (<UserAvatar key={other.connectionId} color={connectionIdToColor(other.connectionId)} 
           name={other.info.name}/>))}
       </div>
-      <p>Share Button</p>
+     <SharedMenu roomId={roomId} othersWithAccessToRoom={othersWithAccessToRoom}/>
      </div>
      <div className="border-b border-gray-300" />
      {layer ? (<>
@@ -278,7 +282,7 @@ export default function SideBars({leftMinimized, setLeftMinimized}:{
         {others.map((other) => (<UserAvatar key={other.connectionId} color={connectionIdToColor(other.connectionId)} 
           name={other.info.name}/>))}
       </div>
-      <p>Share Button</p>
+      <SharedMenu roomId={roomId} othersWithAccessToRoom={othersWithAccessToRoom}/>
     </div>
     }
     </>

@@ -4,6 +4,7 @@ import { LiveList, LiveMap, LiveObject } from "@liveblocks/client";
 import {ClientSideSuspense, LiveblocksProvider, RoomProvider} from "@liveblocks/react";
 import type { ReactNode } from "react";
 import type { Layer } from "~/types";
+import Image from "next/image";
 
 export function Room({children, roomId}: {children: ReactNode, roomId: string}) {
  return (
@@ -25,9 +26,11 @@ export function Room({children, roomId}: {children: ReactNode, roomId: string}) 
          
          <ClientSideSuspense fallback={
            <div className="flex h-screen items-center justify-center flex-col gap-3">
-            <img 
+            <Image 
              src="/vedlab.png" alt="Logo" 
-             className="h-[50px] w-[50px] animate-bounce"   
+             width={50} 
+             height={50}
+             className="animate-bounce"   
             />
             <h1 className="text-sm font-semibold">Loading....</h1>
            </div>}>
